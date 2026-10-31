@@ -1,0 +1,6 @@
+@layer components {
+  .input-field {
+    @apply border-2 rounded-xl outline-none transition-colors duration-200 ease-in-out font-normal border-input bg-input;
+    @apply focus-visible:border-2 focus-visible:border-ui-primary;
+  }
+}

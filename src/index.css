@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@layer base, theme, components;
+@import "./css/base.css" layer(base);
+@import "./css/theme.css" layer(theme);
+@import "./css/components.css" layer(components);
+
+html {
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+}
+
+html,
+body {
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+  -webkit-user-select: none;
+  /* Safari/Chrome */
+  -moz-user-select: none;
+  /* Firefox */
+  -ms-user-select: none;
+  /* IE/Edge */
+  user-select: none;
+  /* Standard */
+}
+
+body {
+  flex: 1;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+h1 {
+  @apply text-5xl font-bold;
+}
+h2 {
+  @apply text-3xl font-bold;
+}
+h3 {
+  @apply text-2xl font-bold;
+}
+h4 {
+  @apply text-xl font-bold;
+}
