@@ -4,13 +4,46 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { Button } from '@/components/button/Button'
 import { FileUpIcon } from 'lucide-react'
 import Card from '@/components/card/Card'
+import { getSheets } from '@/infraestructure/tauri/commands'
+import type { ColumnHeader, FileSheet } from '@/types/FileConfig'
 
-const FileManager = () => {
+interface Props {
+  setHeaders: ColumnHeader[]
+  setSheets: FileSheet[]
+}
+
+const FileManager = ({ setHeaders, setSheets }: Props) => {
   const getConfig = useConfigStore((state) => state.getConfig)
   const setConfig = useConfigStore((state) => state.setConfig)
 
-  const openFile = async () => {
-    const selected = await open({
+  const config = getConfig();
+
+  const handleSelectExcel = async () => {
+    const filePath = await selectExcelFile()
+
+    if (!filePath) return
+
+    const sheets = await getSheets(filePath)
+
+    const nextConfig = {
+      ...config!,
+      catalog: {
+        filePath,
+        sheetName: sheets[0] ?? '',
+        headerRow: 0,
+        referenceColumn: 0,
+        nameColumn: 1,
+      },
+    }
+
+    setConfig(nextConfig)
+    await saveAppConfig(nextConfig)
+
+    setSheets(sheets)
+  }
+
+  const selectExcelFile = async () => {
+    return await open({
       multiple: false,
       filters: [
         {
@@ -19,26 +52,18 @@ const FileManager = () => {
         },
       ],
     })
-    await handleSaveFile(selected as string)
   }
 
-  const handleSaveFile = async (selected: string) => {
-    if (!selected) return
-    const config = getConfig()
-    const updatedConfig = { ...config, catalog: { ...config.catalog, filePath: selected } }
-    setConfig(updatedConfig)
-    await saveAppConfig(updatedConfig)
-  }
   return (
     <div>
-      <Card onClick={openFile} color="contrast" className="flex justify-center flex-col items-center gap-4 border-2 border-ui-primary/30 rounded-md border-dashed p-8 transition-all duration-500 hover:border-ui-primary cursor-pointer">
+      <Card onClick={selectExcelFile} color="contrast" className="flex justify-center flex-col items-center gap-4 border-2 border-ui-primary/30 rounded-md border-dashed p-8 transition-all duration-500 hover:border-ui-primary cursor-pointer">
         <div className="flex flex-col items-center gap-2">
           <div className='border border-ui-primary border-dashed rounded-full p-8'>
             <FileUpIcon className="size-10" />
           </div>
         </div>
         <p className="text-lg font-bold">Pulsa aquí para cargar el catálogo</p>
-        <Button onClick={openFile}>Cargar catálogo</Button>
+        <Button>Cargar catálogo</Button>
       </Card>
     </div>
   );
