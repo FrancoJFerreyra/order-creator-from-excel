@@ -6,7 +6,7 @@ const Layout = () => {
   return (
     <div className="flex flex-col flex-1">
       <Header />
-      <Container size="5xl" className="mx-auto">
+      <Container size="responsive" className="mx-auto">
         <Outlet />
       </Container>
     </div>

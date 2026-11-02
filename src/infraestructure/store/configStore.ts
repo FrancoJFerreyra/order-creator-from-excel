@@ -3,7 +3,6 @@ import type { AppConfig } from '../../types/AppConfig'
 
 type State = {
   config: AppConfig
-  getConfig: () => AppConfig
   setConfig: (config: AppConfig) => void
   clearConfig: () => void
 }
@@ -21,10 +20,9 @@ const initialConfig: AppConfig = {
   },
 }
 
-export const useConfigStore = create<State>()((set, get) => ({
+export const useConfigStore = create<State>()((set) => ({
   config: initialConfig,
 
-  getConfig: () => get().config,
   setConfig: (config) => set({ config }),
   clearConfig: () => set({ config: initialConfig }),
 }))

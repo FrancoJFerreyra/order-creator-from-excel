@@ -15,7 +15,7 @@ const Order = ({ items }: Props) => {
   const [customerName, setCustomerName] = useState("");
 
   return (
-    <div>
+    <div className="flex flex-col gap-4">
       <Subtitle title="Pedido" />
       <FormInput
         label="Nombre del cliente"
