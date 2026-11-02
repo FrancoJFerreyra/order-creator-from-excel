@@ -1,78 +1,115 @@
-# React + TypeScript + Vite
+# Excel Order Creator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A small desktop app for taking phone orders without manually digging through a price-list Excel.
 
-Currently, two official plugins are available:
+Today the workflow is: listen to the order, open the price list, look up every product one by one (by reference or by name), then copy name and reference into a second Excel that holds the pending-orders queue. This app replaces the lookup and the copy-paste: load the price list once, search products, build the order, and paste the result into the existing queue file.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Why a clipboard export instead of writing the Excel
 
-## React Compiler
+The output Excel is a shared queue on OneDrive, not a history: rows are added per order and deleted by hand when they are done. It must stay current at all times, so the app never writes to it. Instead it produces the rows as tab-separated text and puts them on the clipboard; the user focuses the first empty cell of the queue and presses `Ctrl + V`.
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+The queue format is preserved as-is:
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+| cliente | fecha | referencia | nombre |
+| --- | --- | --- | --- |
+| Ana | 02/11/2026 | REF-001 | 10, Coca Cola 330ml |
+|  |  | REF-002 | 2, Agua 500ml |
 
-## Expanding the ESLint configuration
+Quantity is embedded in the `nombre` column as `"{quantity}, {product name}"`, and follow-up rows of the same order leave `cliente` and `fecha` empty.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Stack
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Tauri v2** shell with a **Rust** backend (`src-tauri`)
+- **React 19 + TypeScript** frontend built with **Vite**
+- **Tailwind CSS v4** with **tailwind-variants** for component styles
+- **Ark UI** for form primitives (`Field`, `Select`)
+- **Zustand** for shared configuration state
+- **calamine** to read `.xlsx` workbooks in Rust
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Requirements: Node.js, Yarn, a Rust toolchain, and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS.
 
+```bash
+yarn install
+yarn tauri dev      # desktop app with hot reload
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Other scripts:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+yarn dev            # Vite only; Tauri commands are unavailable in the browser
+yarn build          # type-check + production build
+yarn lint           # ESLint
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
+## How configuration works
+
+Rust persists the user's selections in `config.json` inside the app local data directory (`app_local_data_dir`, identifier `com.tauri.dev`; on Linux that is `~/.local/share/com.tauri.dev/config.json`). The imported product cache lives next to it as `catalog.json`. Nothing is kept in `localStorage`, so the desktop app and a future installer behave the same way.
+
+```json
+{
+  "catalog": {
+    "filePath": "/home/ana/Documents/lista-de-precios.xlsx",
+    "sheetName": "Productos",
+    "headerRow": 0,
+    "referenceColumn": 0,
+    "nameColumn": 1
   },
-])
+  "output": {
+    "headers": ["cliente", "fecha", "referencia", "nombre"]
+  }
+}
+```
+
+- `headerRow`, `referenceColumn` and `nameColumn` are zero-based indices, so the catalog does not have to follow a fixed layout.
+- On startup `App` calls `get_app_config` and stores the result in Zustand. Components must subscribe to `state.config` (not to a store function) so they re-render when the config arrives or changes.
+- Settings persists every change immediately through `save_app_config`.
+
+## Screens
+
+- **Settings** — load the price-list `.xlsx`, then map which Excel header is the product reference and which one is the name. Once a header is assigned to one field it is no longer offered in the other, so the same column cannot be mapped twice.
+- **New order** — left panel: searchable catalog table; right panel: customer name and the order lines that will be copied to the clipboard.
+
+## Tauri commands
+
+| Command | Purpose |
+| --- | --- |
+| `get_app_config` / `save_app_config` | Read and persist `config.json` |
+| `get_workbook_sheets` | List sheet names of an `.xlsx` |
+| `get_sheet_headers` | Read the header row of a sheet as `{ index, name }` |
+| `import_catalog` | Read the sheet and cache the products locally |
+| `load_catalog` | Load the cached catalog into memory |
+| `search_products` | Search the in-memory catalog by reference or name |
+
+## Project layout
 
 ```
+src/
+  components/          UI primitives (button, card, table, form fields)
+    form/              Form wrappers: label + field + error
+      fields/          Ark UI based inputs (Input, Select)
+  infraestructure/
+    store/             Zustand config store
+    tauri/             Typed wrappers around invoke()
+  pages/
+    Home/              Order creation screen
+    Settings/          Catalog file and header mapping
+  types/               Shared TypeScript types
+src-tauri/
+  src/catalog.rs       Excel reading, catalog cache, search
+  src/config.rs        config.json persistence
+  src/lib.rs           Plugin and command registration
+```
+
+## Status
+
+Working today: catalog file selection, sheet/header discovery, header mapping, and config persistence.
+
+Not wired to the UI yet: catalog import and product search, building the order table, and the clipboard export. The Rust commands for the first two already exist.
+
+## Known issues
+
+- `src-tauri/tauri.conf.json` points `frontendDist` to `../build` while Vite outputs to `dist`, and `beforeDevCommand`/`beforeBuildCommand` use `npm run` while the repo uses Yarn. Align both before producing an installer.
+- `src/pages/Home/Catalog.tsx` still has placeholder state and fails the strict TypeScript build, so `yarn build` and `yarn tauri build` stop there.
+- `yarn lint` fails to start: the installed `typescript-eslint` does not support TypeScript 7 yet.
