@@ -9,7 +9,7 @@ use tauri::{AppHandle, Manager, State};
 use unicode_normalization::{char::is_combining_mark, UnicodeNormalization};
 
 // ============================================================
-// MODELOS
+// MODELS
 // ============================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +31,7 @@ pub struct ColumnHeader {
 #[serde(rename_all = "camelCase")]
 pub struct CatalogSummary {
     pub product_count: usize,
+    pub file_path: String,
     pub sheet_name: String,
     pub reference_column: usize,
     pub name_column: usize,
@@ -55,14 +56,8 @@ pub struct Catalog {
     pub products: Vec<Product>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct AppConfig {
-    pub catalog: Option<CatalogConfig>,
-}
-
 // ============================================================
-// ESTADO DE TAURI
+// TAURI STATE
 // ============================================================
 
 #[derive(Default)]
@@ -71,7 +66,7 @@ pub struct CatalogState {
 }
 
 // ============================================================
-// RUTAS LOCALES
+// LOCAL PATHS
 // ============================================================
 
 fn data_directory(app: &AppHandle) -> Result<PathBuf, String> {
@@ -99,7 +94,7 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 // ============================================================
-// PERSISTENCIA JSON
+// JSON PERSISTENCE
 // ============================================================
 
 fn write_json<T: Serialize>(
@@ -125,8 +120,8 @@ fn write_json<T: Serialize>(
             format!("No se pudo escribir el archivo temporal: {error}")
         })?;
 
-    // En Windows, rename puede fallar si el destino ya existe.
-    // Eliminamos el destino antes de renombrar.
+    // On Windows, rename may fail if the destination already exists.
+    // We delete the destination before renaming.
     if path.exists() {
         fs::remove_file(path)
             .map_err(|error| {
@@ -157,7 +152,7 @@ fn read_json<T: for<'de> Deserialize<'de>>(
 }
 
 // ============================================================
-// UTILIDADES
+// UTILITIES
 // ============================================================
 
 fn normalize_text(value: &str) -> String {
@@ -197,7 +192,7 @@ fn open_sheet(
 }
 
 // ============================================================
-// COMANDO: OBTENER HOJAS
+// COMMAND: GET SHEETS
 // ============================================================
 
 #[tauri::command]
@@ -213,7 +208,7 @@ pub fn get_workbook_sheets(
 }
 
 // ============================================================
-// COMANDO: OBTENER ENCABEZADOS
+// COMMAND: GET HEADERS
 // ============================================================
 
 #[tauri::command]
@@ -259,7 +254,7 @@ pub fn get_sheet_headers(
 }
 
 // ============================================================
-// COMANDO: IMPORTAR CATÁLOGO
+// COMMAND: IMPORT CATALOG
 // ============================================================
 
 #[tauri::command]
@@ -318,13 +313,13 @@ pub fn import_catalog(
                 row.get(config.name_column)
             );
 
-            // Ignorar filas sin referencia o sin nombre.
+            // Ignore rows without reference or name.
             if reference.is_empty() || name.is_empty() {
                 return None;
             }
 
             Some(Product {
-                // Número de fila de Excel, empezando en 1.
+                // Excel row number, starting at 1.
                 source_row: row_index + 1,
                 reference,
                 name,
@@ -344,12 +339,12 @@ pub fn import_catalog(
         products,
     };
 
-    // Guardamos la caché antes de sustituir el catálogo en memoria.
+    // We save the cache before replacing the catalog in memory.
     let cache_path = catalog_cache_path(&app)?;
     write_json(&cache_path, &catalog)?;
 
-    // Si falla la importación o el guardado, no sustituimos
-    // el catálogo que ya estaba cargado.
+    // If the import or save fails, we don't replace the catalog that was already loaded.
+    // The catalog that was already loaded.
     let product_count = catalog.products.len();
 
     {
@@ -363,16 +358,28 @@ pub fn import_catalog(
         *current_catalog = Some(catalog);
     }
 
-    // Guardar la configuración para futuras ejecuciones.
+    // We save the configuration for future executions without losing
+    // the settings that do not belong to the catalog (for example, output).
     let path = config_path(&app)?;
-    let app_config = AppConfig {
-        catalog: Some(config.clone()),
+    let mut app_config: crate::config::AppConfig = if path.exists() {
+        read_json(&path).unwrap_or_default()
+    } else {
+        Default::default()
     };
+
+    app_config.catalog = Some(crate::config::CatalogConfig {
+        file_path: config.file_path.clone(),
+        sheet_name: config.sheet_name.clone(),
+        header_row: config.header_row,
+        reference_column: config.reference_column,
+        name_column: config.name_column,
+    });
 
     write_json(&path, &app_config)?;
 
     Ok(CatalogSummary {
         product_count,
+        file_path: config.file_path,
         sheet_name: config.sheet_name,
         reference_column: config.reference_column,
         name_column: config.name_column,
@@ -380,7 +387,7 @@ pub fn import_catalog(
 }
 
 // ============================================================
-// COMANDO: CARGAR CATÁLOGO GUARDADO
+// COMMAND: LOAD SAVED CATALOG
 // ============================================================
 
 #[tauri::command]
@@ -398,6 +405,7 @@ pub fn load_catalog(
 
     let summary = CatalogSummary {
         product_count: catalog.products.len(),
+        file_path: catalog.config.file_path.clone(),
         sheet_name: catalog.config.sheet_name.clone(),
         reference_column: catalog.config.reference_column,
         name_column: catalog.config.name_column,
@@ -416,7 +424,7 @@ pub fn load_catalog(
 }
 
 // ============================================================
-// COMANDO: BUSCAR PRODUCTOS
+// COMMAND: SEARCH PRODUCTS
 // ============================================================
 
 #[tauri::command]

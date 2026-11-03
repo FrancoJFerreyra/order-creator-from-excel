@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import FormErrorMessage from "./FormErrorMessage";
 import FormField from "./FormField";
 import Input from "./fields/Input";
+import InputNumber from "./fields/InputNumber";
 
 interface Props {
   endAddon?: ReactNode;
@@ -15,6 +16,7 @@ interface Props {
   placeholder?: string;
   required?: boolean;
   startAddon?: ReactNode;
+  type?: "text" | "number";
   value: string;
   variant?: styles.Variant;
 };
@@ -31,6 +33,7 @@ const FormInput =
     placeholder,
     required = false,
     startAddon,
+    type,
     value,
     variant,
   }: Props) => {
@@ -46,14 +49,36 @@ const FormInput =
           required={required}
         >
           <div className={`${isFullWidth} flex flex-col gap-2`}>
-            <Input
-              className={isFullWidth}
-              endAdornment={endAdornment}
-              onChange={onChange}
-              placeholder={placeholder}
-              value={value}
-              variant={error ? "error" : variant}
-            />
+            {type == "number" ? (
+              <InputNumber
+                aria-invalid={!!error}
+                className={isFullWidth}
+                endAdornment={endAdornment}
+                formatOptions={{
+                  maximumFractionDigits: 1,
+                }}
+                id={name}
+                onChange={onChange}
+                placeholder={placeholder}
+                step={1}
+                type="number"
+                value={value}
+                variant={error ? "error" : variant}
+              />
+            ) : (
+              <Input
+                aria-invalid={!!error}
+                className={isFullWidth}
+                endAdornment={endAdornment}
+                id={name}
+                onChange={onChange}
+                placeholder={placeholder}
+                type={type}
+                value={value}
+                variant={error ? "error" : variant}
+              />
+            )
+            }
             {error && <FormErrorMessage error={error} />}
           </div>
         </FormField>

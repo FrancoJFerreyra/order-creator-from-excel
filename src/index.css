@@ -48,3 +48,48 @@ h3 {
 h4 {
   @apply text-xl font-bold;
 }
+
+td {
+  @apply py-2 px-4;
+}
+
+th {
+  @apply py-2 px-4 font-bold;
+}
+
+.swal2-actions {
+  flex-direction: row-reverse !important;
+}
+
+.swal2-actions button {
+  @apply font-semibold p-4;
+}
+
+.swal2-popup,
+.swal2-modal,
+.swal2-icon-info,
+.swal2-show {
+  @apply !bg-card text-foreground;
+}
+
+.swal2-container {
+  z-index: 2000 !important;
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif !important;
+}
+
+.swal2-popup {
+  padding: 20px !important;
+}
+
+.swal2-actions {
+  width: 100% !important;
+}
+
+.swal2-actions button {
+  flex: 1 !important;
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif !important;
+}
+
+.swal2-actions .swal2-confirm {
+  @apply bg-ui-primary;
+}
