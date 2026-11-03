@@ -4,11 +4,7 @@ import { HomeIcon, SettingsIcon } from 'lucide-react';
 
 const Header = () => {
   return (
-    <ul className="grid grid-cols-3 bg-ui-navigation p-4">
-      <li></li>
-      <li className="text-center">
-        <h1 className="text-2xl font-bold">Creador de pedidos</h1>
-      </li>
+    <ul className="flex justify-end bg-ui-navigation p-4">
       <li className="w-full flex justify-end gap-4">
         <Link to="/">
           <Button variant="solid" size="sm" endIcon={<HomeIcon className="size-6" />}>

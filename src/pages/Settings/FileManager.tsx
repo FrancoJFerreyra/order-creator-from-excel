@@ -5,7 +5,6 @@ import { Button } from '@/components/button/Button'
 import { FileUpIcon, RefreshCcw } from 'lucide-react'
 import Card from '@/components/card/Card'
 import { getSheets } from '@/infraestructure/tauri/commands'
-import Subtitle from '@/components/heading/Subtitle'
 
 const FileManager = () => {
   const config = useConfigStore((state) => state.config)

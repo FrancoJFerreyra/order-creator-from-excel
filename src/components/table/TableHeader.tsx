@@ -4,7 +4,7 @@ interface Props {
 
 const TableHeader = ({ headers }: Props) => {
   return (
-    <thead>
+    <thead className="bg-ui-secondary sticky top-0">
       <tr>
         {headers.map((header) => (
           <th key={header}>{header}</th>

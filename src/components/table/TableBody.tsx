@@ -6,7 +6,7 @@ interface Props {
 
 const TableBody = ({ children }: Props) => {
   return (
-    <tbody>
+    <tbody className="divide-y divide-ui-secondary-border divide-dashed">
       {children}
     </tbody>
   );
